@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1a3c6e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>GST-AE</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; padding:12px; color:#222; }
+  .card { max-width:1200px; margin:0 auto 12px; background:#fff; border-radius:10px; padding:16px 18px; box-shadow:0 2px 10px rgba(0,0,0,.08); }
+  h1 { margin:0 0 2px; font-size:22px; color:#1a3c6e; }
+  .sub { color:#667; font-size:13px; margin-bottom:12px; }
+  .row { display:flex; flex-wrap:wrap; gap:12px; }
+  .row > div { flex:1 1 200px; min-width:170px; }
+  label.l { display:block; font-size:12px; font-weight:bold; color:#445; margin-bottom:3px; }
+  select, input[type=password], input[type=text] { width:100%; padding:9px; border:1px solid #bbc; border-radius:6px; font-size:15px; }
+  button.submit { background:#1a3c6e; color:#fff; border:0; border-radius:6px; padding:10px 18px; font-size:15px; cursor:pointer; }
+  button.submit:disabled { background:#aab3bd; cursor:not-allowed; }
+  button.fetch { background:#0d7a3f; }
+  #banner { margin-top:12px; padding:10px 12px; border-radius:6px; font-size:14px; background:#eef3fa; border-left:4px solid #1a3c6e; white-space:pre-line; }
+  #banner.err { background:#fdeaea; border-color:#c0392b; }
+  #banner.ok { background:#e8f6ee; border-color:#0d7a3f; }
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .tab-btn { padding:8px 12px; border:1px solid #1a3c6e; background:#fff; color:#1a3c6e; border-radius:6px; cursor:pointer; font-size:13px; }
+  .tab-btn.active { background:#1a3c6e; color:#fff; }
+  .tab-btn.done::after { content:" ✔"; color:#2ecc71; font-weight:bold; }
+  .tab-btn:disabled { opacity:.45; cursor:not-allowed; }
+  .twrap { overflow-x:auto; border:1px solid #ccd; border-radius:6px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th, td { border:1px solid #ccd; padding:4px 5px; text-align:center; }
+  th { background:#1a3c6e; color:#fff; font-weight:bold; }
+  th.g { background:#2d5a9c; }
+  td.lab { text-align:left; min-width:230px; background:#f4f7fb; position:sticky; left:0; }
+  td.lab small { color:#667; }
+  tr.total td { background:#fff6d6; font-weight:bold; }
+  tr.sec td.lab { background:#dce6f1; font-weight:bold; }
+  td input { width:92px; padding:5px; border:1px solid #bbc; border-radius:4px; text-align:right; font-size:13px; }
+  td input.calc, .gcell input.calc { background:#eee; border-color:#ddd; font-weight:bold; }
+  td input.auto, .gcell input.auto { background:#eaf6ff; }
+  td input.brk, .gcell input.brk { background:#fff8c4; border-color:#e6d77a; }
+  td.na { background:#f0f0f0; }
+  fieldset { border:1px solid #ccd; border-radius:6px; margin:0 0 10px; padding:8px 10px; }
+  legend { font-weight:bold; color:#1a3c6e; font-size:13px; padding:0 6px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:8px 12px; }
+  .gcell label { display:block; font-size:11px; color:#445; margin-bottom:2px; }
+  .gcell input { width:100%; padding:7px; border:1px solid #bbc; border-radius:5px; font-size:14px; text-align:right; }
+  .modebar { margin:10px 0; font-size:14px; }
+  .modebar label { margin-right:14px; }
+  .msg { margin-top:8px; font-size:14px; font-weight:bold; white-space:pre-line; }
+  .note { font-size:12px; color:#556; margin:6px 0 10px; }
+  .locked { opacity:.5; pointer-events:none; }
+  @media (max-width:600px) { body { padding:6px; } .card { padding:12px; } td.lab { min-width:150px; } td input { width:78px; } }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>GST-AE</h1>
+  <div class="sub">Anti-Evasion MIS &mdash; GI-GST-1 to GI-GST-6 &amp; ARM-AE &middot; Kolkata Zone, Haldia Commissionerate &middot; Amount in Rs. lakh</div>
+  <div class="row">
+    <div><label class="l" for="Unit">Unit</label>
+      <select id="Unit"><option value="">-- Select unit --</option>
+        <option>HQ-AE</option><option>A&amp;N</option><option>HAL-1</option><option>HAL-2</option><option>KGP</option></select></div>
+    <div><label class="l" for="Password">Password</label><input type="password" id="Password" autocomplete="off"></div>
+    <div><label class="l" for="Month">Month (reporting period)</label><select id="Month"><option value="">-- Select month --</option></select></div>
+    <div><label class="l">Financial Year</label><input type="text" id="FY" readonly></div>
+  </div>
+  <div style="margin-top:12px"><button type="button" id="fetchBtn" class="submit fetch" disabled>⬇ Fetch Previous Month Figures &amp; Open Forms</button></div>
+  <div id="banner">Select Unit, enter Password and choose the Month.</div>
+  <div class="note">All figures start at 0. "Upto the month" (current and previous F.Y.) and the Opening balance are filled automatically from filed data (previous month / last year) and cannot be typed. Only the "For the month" figures are entered. Blue cells are auto-filled and locked; light-yellow cells (age-wise and section-wise break-up of closing balance) are editable - they are carried over from last month where available and must add up to the Closing balance.</div>
+</div>
+
+<div class="card" id="formsCard">
+  <div class="tabs" id="tabs"></div>
+  <div id="forms"></div>
+</div>
+
+<script>
+// ============================================================ config
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7OCl8F-LKRzq5u8Fh5pzH755qltz2L9aYr-cBvpzh9GQY1qSYY4CCwWG5SoUK3GD7Ww/exec";
+const SYSTEM_START_MONTH = '2026-10';          // must match Code.gs
+
+// ============================================================ helpers
+const $ = id => document.getElementById(id);
+function pad2(n){ return ('0' + n).slice(-2); }
+function monthLabel(key){ const n=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return n[+key.slice(5,7)-1]+' '+key.slice(0,4); }
+function fyOf(key){ const y=+key.slice(0,4), m=+key.slice(5,7); const s=m>=4?y:y-1; return s+'-'+String(s+1).slice(-2); }
+function addMonths(key,n){ const d=new Date(+key.slice(0,4), +key.slice(5,7)-1+n, 1); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
+function currentMonthKey(){ const n=new Date(); return n.getFullYear()+'-'+pad2(n.getMonth()+1); }
+function r2(x){ return Math.round((x+Number.EPSILON)*100)/100; }
+
+let jsonpCounter = 0;
+function jsonp(url, fallback){
+  return new Promise(resolve => {
+    const name = 'jp_' + (++jsonpCounter) + '_' + Date.now();
+    const s = document.createElement('script');
+    let done = false;
+    const finish = v => { if (done) return; done = true; try{ delete window[name]; }catch(e){ window[name]=undefined; } if (s.parentNode) s.parentNode.removeChild(s); resolve(v); };
+    window[name] = d => finish(d);
+    s.onerror = () => finish(fallback);
+    setTimeout(() => finish(fallback), 20000);
+    s.src = url + '&callback=' + name + '&_=' + Date.now();
+    document.body.appendChild(s);
+  });
+}
+function q(o){ return Object.keys(o).map(k => encodeURIComponent(k)+'='+encodeURIComponent(o[k])).join('&'); }
+
+// ============================================================ report definitions
+// field: {id,label,group,type:'int'|'amt', mode:'in'|'calc'|'upto'|'py'|'open', monthOf, pyFrom, openFrom, calc}
+// row:   {keys:{...}, label, used:[fieldIds]|null, over:{fieldId:{calc}}, kind:'total'|'sec'|'display', sumRows:[idx]}
+const F = (id,label,group,type,mode,extra) => Object.assign({id,label,group,type,mode:mode||'in'}, extra||{});
+const sumOver = (idxs) => (g,fid) => idxs.reduce((s,j)=>s+g(j,fid),0);
+
+const R = [];
+
+// ---- GI-GST-1
+(function(){
+  const G1='Current F.Y. - For the month', G2='Current F.Y. - Upto the month', G3='Previous F.Y. - For the month', G4='Previous F.Y. - Upto the month';
+  const fields = [
+    F('CY_Month_Cases','No. of cases',G1,'int'), F('CY_Month_Amt','Amount',G1,'amt'),
+    F('CY_Upto_Cases','No. of cases',G2,'int','upto',{monthOf:'CY_Month_Cases'}), F('CY_Upto_Amt','Amount',G2,'amt','upto',{monthOf:'CY_Month_Amt'}),
+    F('PY_Month_Cases','No. of cases',G3,'int','py',{pyFrom:'CY_Month_Cases'}), F('PY_Month_Amt','Amount',G3,'amt','py',{pyFrom:'CY_Month_Amt'}),
+    F('PY_Upto_Cases','No. of cases',G4,'int','pyupto',{pyFrom:'CY_Upto_Cases',monthOf:'PY_Month_Cases'}), F('PY_Upto_Amt','Amount',G4,'amt','pyupto',{pyFrom:'CY_Upto_Amt',monthOf:'PY_Month_Amt'})
+  ];
+  const rows = [];
+  ['DETECTION','REALISATION'].forEach((item, ii) => {
+    const start = rows.length;
+    // DETECTION and REALISATION: no. of cases is entered only in the TOTAL row (one case can span several tax heads), so the head-wise case cells are disabled
+    const ampOnly = fields.filter(f => f.type === 'amt').map(f => f.id);
+    ['CGST','SGST/UTGST','IGST','CESS'].forEach(h => rows.push(Object.assign({keys:{Item:item,Tax_Head:h}, label:item+' - '+h}, {used:ampOnly})));
+    const amtOver = {};
+    ['CY_Month_Amt','CY_Upto_Amt','PY_Month_Amt','PY_Upto_Amt'].forEach(fid => amtOver[fid] = {calc:(g)=>sumOver([start,start+1,start+2,start+3])(g,fid)});
+    rows.push({keys:{Item:item,Tax_Head:'TOTAL'}, label:item+' - TOTAL (cases: enter total no. of cases)', kind:'total', over:amtOver});
+  });
+  R.push({id:'GI_GST_1', title:'GI-GST-1', desc:'Detection & Realisation (tax head-wise)', layout:'table', keyFields:['Item','Tax_Head'], fields, rows,
+    // head-wise case cells are disabled; total cases are entered only in the TOTAL rows
+    validate:(v,E)=>{}});
+})();
+
+// ---- GI-GST-1A
+(function(){
+  const G1='Current F.Y. - For the month', G2='Current F.Y. - Upto the month', G3='Previous F.Y. - For the month', G4='Previous F.Y. - Upto the month';
+  const fields = [
+    F('CY_Month','No.',G1,'int'), F('CY_Upto','No.',G2,'int','upto',{monthOf:'CY_Month'}),
+    F('PY_Month','No.',G3,'int','py',{pyFrom:'CY_Month'}), F('PY_Upto','No.',G4,'int','pyupto',{pyFrom:'CY_Upto',monthOf:'PY_Month'})
+  ];
+  const rows = ['Arrests Made','PROSECUTION SANCTIONED','Compounding of Offences','PROSECUTION LAUNCHED'].map(n => ({keys:{Item:n}, label:n}));
+  R.push({id:'GI_GST_1A', title:'GI-GST-1A', desc:'Arrests, Prosecution, Compounding', layout:'table', keyFields:['Item'], fields, rows});
+})();
+
+// ---- GI-GST-2  (single row, grid layout)
+(function(){
+  const fields = [];
+  const A='Opening balance', B='Receipt', C='Cases disposed during the month', D='Cases disposed upto the month', E='Closing balance',
+        H='Age-wise break-up of closing balance', I='Break-up of closing balance (section-wise)';
+  const pair = (idc,idt,lab,grp,mode,extra) => { fields.push(F(idc,lab+' - No. of cases',grp,'int',mode,extra&&extra.c)); fields.push(F(idt,lab+' - Tax involved',grp,'amt',mode,extra&&extra.t)); };
+  pair('Opening_Cases','Opening_Tax','Opening',A,'open',{c:{openFrom:'Closing_Cases'},t:{openFrom:'Closing_Tax'}});
+  pair('Receipt_Cases','Receipt_Tax','Receipt',B);
+  const reasons = [['SCN','SCN / DRC-01 issued'],['Vol','Voluntary compliance / DRC-04'],['Merit','Closure on merit'],['Transfer','Closure by transfer']];
+  reasons.forEach(([k,l]) => pair('M_'+k+'_Cases','M_'+k+'_Tax',l,C));
+  fields.push(F('M_Total_Cases','Total - No. of cases',C,'int','calc',{calc:(g)=>['SCN','Vol','Merit','Transfer'].reduce((s,k)=>s+g(0,'M_'+k+'_Cases'),0)}));
+  fields.push(F('M_Total_Tax','Total - Tax involved',C,'amt','calc',{calc:(g)=>['SCN','Vol','Merit','Transfer'].reduce((s,k)=>s+g(0,'M_'+k+'_Tax'),0)}));
+  reasons.forEach(([k,l]) => pair('U_'+k+'_Cases','U_'+k+'_Tax',l,D,'upto',{c:{monthOf:'M_'+k+'_Cases'},t:{monthOf:'M_'+k+'_Tax'}}));
+  fields.push(F('U_Total_Cases','Total - No. of cases',D,'int','calc',{calc:(g)=>['SCN','Vol','Merit','Transfer'].reduce((s,k)=>s+g(0,'U_'+k+'_Cases'),0)}));
+  fields.push(F('U_Total_Tax','Total - Tax involved',D,'amt','calc',{calc:(g)=>['SCN','Vol','Merit','Transfer'].reduce((s,k)=>s+g(0,'U_'+k+'_Tax'),0)}));
+  fields.push(F('Closing_Cases','Closing - No. of cases (= opening + receipt - disposed)',E,'int','calc',{calc:(g)=>g(0,'Opening_Cases')+g(0,'Receipt_Cases')-g(0,'M_Total_Cases')}));
+  fields.push(F('Closing_Tax','Closing - Tax involved',E,'amt','calc',{calc:(g)=>g(0,'Opening_Tax')+g(0,'Receipt_Tax')-g(0,'M_Total_Tax')}));
+  pair('Age_LT1_Cases','Age_LT1_Tax','Less than 1 year',H,'brk');
+  pair('Age_1to2_Cases','Age_1to2_Tax','1-2 years',H,'brk');
+  pair('Age_GT2_Cases','Age_GT2_Tax','More than 2 years',H,'brk');
+  fields.push(F('S73_Cases','Cases booked u/s 73 - No. of cases',I,'int','brk'), F('S73_Pending_GT1yr','No. of cases pending beyond 1 year',I,'int','brk'));
+  fields.push(F('S74_Cases','Cases booked u/s 74 - No. of cases',I,'int','brk'), F('S74_Pending_GT2yr','No. of cases pending beyond 2 years',I,'int','brk'));
+  fields.push(F('S76_Cases','Cases booked u/s 76 - No. of cases',I,'int','brk'), F('S76_Pending_GT2yr','No. of cases pending beyond 2 years',I,'int','brk'));
+  R.push({id:'GI_GST_2', title:'GI-GST-2', desc:'Investigation of cases', layout:'grid', keyFields:[], fields, rows:[{keys:{}, label:'GI-GST-2'}],
+    live:(v)=>{
+      const cc=v(0,'Closing_Cases'), ct=v(0,'Closing_Tax');
+      const ac=v(0,'Age_LT1_Cases')+v(0,'Age_1to2_Cases')+v(0,'Age_GT2_Cases'), at=v(0,'Age_LT1_Tax')+v(0,'Age_1to2_Tax')+v(0,'Age_GT2_Tax');
+      const bc=v(0,'S73_Cases')+v(0,'S74_Cases')+v(0,'S76_Cases');
+      const row=(lab,a,b)=>({ok:Math.abs(a-b)<0.01, text:lab+': '+r2(a)+' vs Closing '+r2(b)+(Math.abs(a-b)<0.01?'  - matches':'  - difference '+r2(a-b))});
+      return [row('Age-wise cases',ac,cc), row('Age-wise tax',at,ct), row('Section-wise cases (73+74+76)',bc,cc)];
+    },
+    validate:(v,E)=>{
+      const cc=v(0,'Closing_Cases'), ct=v(0,'Closing_Tax');
+      if (cc < 0 || ct < -0.005) E.push('GI-GST-2: Closing balance is negative - check Opening / Receipt / Disposals.');
+      const ac=v(0,'Age_LT1_Cases')+v(0,'Age_1to2_Cases')+v(0,'Age_GT2_Cases'), at=v(0,'Age_LT1_Tax')+v(0,'Age_1to2_Tax')+v(0,'Age_GT2_Tax');
+      if (Math.abs(ac-cc) > 0.01) E.push('GI-GST-2: Age-wise cases total ('+ac+') must equal Closing cases ('+cc+').');
+      if (Math.abs(at-ct) > 0.01) E.push('GI-GST-2: Age-wise tax total ('+r2(at)+') must equal Closing tax ('+r2(ct)+').');
+      const bc=v(0,'S73_Cases')+v(0,'S74_Cases')+v(0,'S76_Cases');
+      if (Math.abs(bc-cc) > 0.01) E.push('GI-GST-2: Section-wise break-up (73+74+76 = '+bc+') must equal Closing cases ('+cc+').');
+      if (v(0,'S73_Pending_GT1yr') > v(0,'S73_Cases')) E.push('GI-GST-2: Section 73 cases pending beyond 1 year cannot exceed section 73 cases.');
+      if (v(0,'S74_Pending_GT2yr') > v(0,'S74_Cases')) E.push('GI-GST-2: Section 74 cases pending beyond 2 years cannot exceed section 74 cases.');
+      if (v(0,'S76_Pending_GT2yr') > v(0,'S76_Cases')) E.push('GI-GST-2: Section 76 cases pending beyond 2 years cannot exceed section 76 cases.');
+    }});
+})();
+
+// ---- GI-GST-3
+(function(){
+  const G1='For the month', G2='Upto the month';
+  const fields = [F('M_Cases','No. of cases',G1,'int'), F('M_Amount','Amount',G1,'amt'),
+                  F('U_Cases','No. of cases',G2,'int','upto',{monthOf:'M_Cases'}), F('U_Amount','Amount',G2,'amt','upto',{monthOf:'M_Amount'})];
+  const rows = [];
+  ['Cases ripe for sanction of reward','Reward sanctioned and disbursed','Reward sanctioned but pending for disbursal'].forEach(d =>
+    ['Departmental Officer','Informer'].forEach(r => rows.push({keys:{Description:d,Recipient:r}, label:d+' - '+r})));
+  R.push({id:'GI_GST_3', title:'GI-GST-3', desc:'Reward sanction / disbursal', layout:'table', keyFields:['Description','Recipient'], fields, rows});
+})();
+
+// ---- GI-GST-4
+(function(){
+  const G1='For the month', G2='Upto the month';
+  const fields = [F('M_No','No.',G1,'int'), F('M_Value','Value',G1,'amt'), F('M_Tax','Tax involved',G1,'amt'),
+                  F('U_No','No.',G2,'int','upto',{monthOf:'M_No'}), F('U_Value','Value',G2,'amt','upto',{monthOf:'M_Value'}), F('U_Tax','Tax involved',G2,'amt','upto',{monthOf:'M_Tax'})];
+  const N=['M_No','U_No'], NV=['M_No','M_Value','U_No','U_Value'], NVT=null, V=['M_Value','U_Value'];
+  const rw = (no,desc,sub,used) => ({keys:{Item_No:no,Description:desc,Sub_Item:sub}, label:no+'. '+desc+(sub!=='-'?' - '+sub:''), used});
+  const rows = [
+    rw(1,'AE-1 Filed','-',N), rw(2,'AE-2 Filed','-',N),
+    rw(3,'Inspection of premises conducted (u/s 67(1))','-',N), rw(4,'Searches (u/s 67(2))','-',N),
+    rw(5,'Inspection of goods in movement conducted (u/s 68)','-',N), rw(6,'Summons issued (u/s 70)','-',N),
+    rw(7,'Seizure (u/s 67(2))','Goods',NVT), rw(7,'Seizure (u/s 67(2))','Vehicles',NVT), rw(7,'Seizure (u/s 67(2))','Currency',NVT),
+    rw(8,'Seizure (u/s 129(1))','Goods in transit',NV), rw(8,'Seizure (u/s 129(1))','Vehicles in transit',NV),
+    rw(9,'Attachment (u/s 83(1))','Provisional Attachment of goods',NV), rw(9,'Attachment (u/s 83(1))','Provisional Attachment of property',NV),
+    rw(9,'Attachment (u/s 83(1))','Provisional Attachment of bank accounts',N),
+    rw(10,'Incident Reports issued','No. of IRs',N), rw(10,'Incident Reports issued','Detection Amount',V)
+  ];
+  R.push({id:'GI_GST_4', title:'GI-GST-4', desc:'Work done: inspections, searches, seizures, attachments, IRs', layout:'table', keyFields:['Item_No','Description','Sub_Item'], fields, rows});
+})();
+
+// ---- GI-GST-5A (single row)
+(function(){
+  const A='Persons arrested', S='Persons whose prosecution is sanctioned', L='Persons whose prosecution is launched', W='Prosecution withdrawn / pending', O='Final order passed by court';
+  const fields = [
+    F('Arrested_Month','For the month',A,'int'), F('Arrested_Upto','Upto the month',A,'int','upto',{monthOf:'Arrested_Month'}),
+    F('Sanc_Within60','Within 60 days of arrest (month)',S,'int'), F('Sanc_After60_BeforeAdj','After 60 days but before adjudication (month)',S,'int'), F('Sanc_AfterAdj','After adjudication (month)',S,'int'),
+    F('Sanc_Total_Month','Total - for the month (auto)',S,'int','calc',{calc:(g)=>g(0,'Sanc_Within60')+g(0,'Sanc_After60_BeforeAdj')+g(0,'Sanc_AfterAdj')}),
+    F('Sanc_Total_Upto','Total - upto the month',S,'int','upto',{monthOf:'Sanc_Total_Month'}),
+    F('Launch_Within60','Within 60 days of arrest (month)',L,'int'), F('Launch_After60_BeforeAdj','After 60 days but before adjudication (month)',L,'int'), F('Launch_AfterAdj','After adjudication (month)',L,'int'),
+    F('Launch_Total_Month','Total - for the month (auto)',L,'int','calc',{calc:(g)=>g(0,'Launch_Within60')+g(0,'Launch_After60_BeforeAdj')+g(0,'Launch_AfterAdj')}),
+    F('Launch_Total_Upto','Total - upto the month',L,'int','upto',{monthOf:'Launch_Total_Month'}),
+    F('Withdrawn_Month','Withdrawn - for the month',W,'int'), F('Withdrawn_Upto','Withdrawn - upto the month',W,'int','upto',{monthOf:'Withdrawn_Month'}),
+    F('Pending_Opening','Opening pending for final order (auto = last month\'s pending)',W,'int','open',{openFrom:'Pending_FinalOrder'}),
+    F('Pending_FinalOrder','Pending for final order (= opening + launched - withdrawn - final orders passed; carried forward)',W,'int','calc',{calc:(g)=>g(0,'Pending_Opening')+g(0,'Launch_Total_Month')-g(0,'Withdrawn_Month')-g(0,'Convicted')-g(0,'Acquitted')}),
+    F('FinalOrders_Total','No. of final orders passed (auto)',O,'int','calc',{calc:(g)=>g(0,'Convicted')+g(0,'Acquitted')}),
+    F('Convicted','Persons convicted',O,'int'), F('Acquitted','Persons acquitted',O,'int')
+  ];
+  R.push({id:'GI_GST_5A', floor:{field:'Pending_FinalOrder', reduce:['Withdrawn_Month','Convicted','Acquitted']}, title:'GI-GST-5A', desc:'Arrest cases - prosecution (persons)', layout:'grid', keyFields:[], fields, rows:[{keys:{}, label:'GI-GST-5A'}],
+    validate:(v,E)=>{ if (v(0,'Pending_FinalOrder') < 0) E.push('GI-GST-5A: Pending for final order is negative - withdrawn + final orders passed cannot exceed opening pending + launched.'); }});
+})();
+
+// ---- GI-GST-5B (single row)
+(function(){
+  const S='Persons whose prosecution is sanctioned', L='Persons whose prosecution is launched', W='Prosecution withdrawn / pending', O='Final order passed by court';
+  const fields = [
+    F('Sanc_BeforeAdj','Before adjudication (month)',S,'int'), F('Sanc_AfterAdj','After adjudication (month)',S,'int'),
+    F('Sanc_Total_Month','Total - for the month (auto)',S,'int','calc',{calc:(g)=>g(0,'Sanc_BeforeAdj')+g(0,'Sanc_AfterAdj')}),
+    F('Sanc_Total_Upto','Total - upto the month',S,'int','upto',{monthOf:'Sanc_Total_Month'}),
+    F('Launch_BeforeAdj','Before adjudication (month)',L,'int'), F('Launch_AfterAdj','After adjudication (month)',L,'int'),
+    F('Launch_Total_Month','Total - for the month (auto)',L,'int','calc',{calc:(g)=>g(0,'Launch_BeforeAdj')+g(0,'Launch_AfterAdj')}),
+    F('Launch_Total_Upto','Total - upto the month',L,'int','upto',{monthOf:'Launch_Total_Month'}),
+    F('Withdrawn_Month','Withdrawn - for the month',W,'int'), F('Withdrawn_Upto','Withdrawn - upto the month',W,'int','upto',{monthOf:'Withdrawn_Month'}),
+    F('Pending_Opening','Opening pending for final order (auto = last month\'s pending)',W,'int','open',{openFrom:'Pending_FinalOrder'}),
+    F('Pending_FinalOrder','Pending for final order (= opening + launched - withdrawn - final orders passed; carried forward)',W,'int','calc',{calc:(g)=>g(0,'Pending_Opening')+g(0,'Launch_Total_Month')-g(0,'Withdrawn_Month')-g(0,'Convicted')-g(0,'Acquitted')}),
+    F('FinalOrders_Total','No. of final orders passed (auto)',O,'int','calc',{calc:(g)=>g(0,'Convicted')+g(0,'Acquitted')}),
+    F('Convicted','Persons convicted',O,'int'), F('Acquitted','Persons acquitted',O,'int')
+  ];
+  R.push({id:'GI_GST_5B', floor:{field:'Pending_FinalOrder', reduce:['Withdrawn_Month','Convicted','Acquitted']}, title:'GI-GST-5B', desc:'Non-arrest cases - prosecution (persons)', layout:'grid', keyFields:[], fields, rows:[{keys:{}, label:'GI-GST-5B'}],
+    validate:(v,E)=>{ if (v(0,'Pending_FinalOrder') < 0) E.push('GI-GST-5B: Pending for final order is negative - withdrawn + final orders passed cannot exceed opening pending + launched.'); }});
+})();
+
+// ---- GI-GST-6
+(function(){
+  const G1='Current F.Y. - For the month', G2='Current F.Y. - Upto the month', G3='Previous F.Y. - For the month', G4='Previous F.Y. - Upto the month';
+  const fields = [
+    F('CY_M_Cases','No. of cases',G1,'int'), F('CY_M_Amt','Amount of tax evasion',G1,'amt'),
+    F('CY_U_Cases','No. of cases',G2,'int','upto',{monthOf:'CY_M_Cases'}), F('CY_U_Amt','Amount of tax evasion',G2,'amt','upto',{monthOf:'CY_M_Amt'}),
+    F('PY_M_Cases','No. of cases',G3,'int','py',{pyFrom:'CY_M_Cases'}), F('PY_M_Amt','Amount of tax evasion',G3,'amt','py',{pyFrom:'CY_M_Amt'}),
+    F('PY_U_Cases','No. of cases',G4,'int','pyupto',{pyFrom:'CY_U_Cases',monthOf:'PY_M_Cases'}), F('PY_U_Amt','Amount of tax evasion',G4,'amt','pyupto',{pyFrom:'CY_U_Amt',monthOf:'PY_M_Amt'})
+  ];
+  const goods = [['PAN MASALA/GUTKHA & CHEWING TOBACCO','24'],['CIGARETTES','2402'],['PLASTICS AND ARTICLES THEREOF','39'],['PLYWOOD','44'],['PAPER PRODUCTS','48'],
+    ['TEXTILES AND ARTICLES THEREOF','51 TO 63'],['CEMENT','68'],['IRON & STEEL PRODUCTS','72'],['COPPER & ARTICLES THEREOF','74']];
+  const serv = [['SERVICES PROVIDED BY THE GOVERNMENT LIKE ALLOTMENT OF MINES/SPECTRUM ETC. UNDER REVERSE CHARGE MECHANISM','0'],['OIDAR SERVICES','0'],['WORKS CONTRACT SERVICES','9954'],
+    ['ACCOMMODATION, FOOD AND BEVERAGE SERVICES','9963'],['REAL ESTATE SERVICES','9972'],['TEMPORARY OR PERMANENT TRANSFER OR PERMITTING THE USE OR ENJOYMENT OF IPR','9973'],
+    ['MAN POWER SUPPLIER/SECURITY SERVICES','9985'],['MANUFACTURING SERVICES ON PHYSICAL INPUTS (GOODS OWNED BY OTHERS)','9988'],['GAMBLING / BETTING SERVICES','999692']];
+  const rows = [{kind:'sec', label:'(A) GOODS'}];
+  goods.forEach(([c,h]) => rows.push({keys:{Group:'GOODS',Category:c,HSN_SAC:h}, label:c, sub:'HSN '+h}));
+  rows.push({kind:'display', label:'TOTAL (A)', sumRows:[1,2,3,4,5,6,7,8,9]});
+  rows.push({kind:'sec', label:'(B) SERVICES'});
+  serv.forEach(([c,h]) => rows.push({keys:{Group:'SERVICES',Category:c,HSN_SAC:h}, label:c, sub:'SAC '+h}));
+  rows.push({kind:'display', label:'TOTAL (B)', sumRows:[12,13,14,15,16,17,18,19,20]});
+  rows.push({kind:'display', label:'GRAND TOTAL (A+B)', sumRows:[10,21]});
+  R.push({id:'GI_GST_6', title:'GI-GST-6', desc:'Top tax-evasion prone goods & services', layout:'table', keyFields:['Category'], fields, rows});
+})();
+
+// ---- ARM-AE
+(function(){
+  const G1='Current F.Y. - For the month', G2='Current F.Y. - Upto the month', G3='Previous F.Y. - For the month', G4='Previous F.Y. - Upto the month';
+  const tot = (a,b) => (g)=>g(0,a)+g(0,b);
+  const fields = [
+    F('CY_Month_Cash','Cash',G1,'amt'), F('CY_Month_ITC','ITC',G1,'amt'), F('CY_Month_Total','Total (auto)',G1,'amt','calc',{calc:tot('CY_Month_Cash','CY_Month_ITC')}),
+    F('CY_Upto_Cash','Cash',G2,'amt','upto',{monthOf:'CY_Month_Cash'}), F('CY_Upto_ITC','ITC',G2,'amt','upto',{monthOf:'CY_Month_ITC'}), F('CY_Upto_Total','Total (auto)',G2,'amt','calc',{calc:tot('CY_Upto_Cash','CY_Upto_ITC')}),
+    F('PY_Month_Cash','Cash',G3,'amt','py',{pyFrom:'CY_Month_Cash'}), F('PY_Month_ITC','ITC',G3,'amt','py',{pyFrom:'CY_Month_ITC'}), F('PY_Month_Total','Total (auto)',G3,'amt','calc',{calc:tot('PY_Month_Cash','PY_Month_ITC')}),
+    F('PY_Upto_Cash','Cash',G4,'amt','pyupto',{pyFrom:'CY_Upto_Cash',monthOf:'PY_Month_Cash'}), F('PY_Upto_ITC','ITC',G4,'amt','pyupto',{pyFrom:'CY_Upto_ITC',monthOf:'PY_Month_ITC'}), F('PY_Upto_Total','Total (auto)',G4,'amt','calc',{calc:tot('PY_Upto_Cash','PY_Upto_ITC')})
+  ];
+  R.push({id:'ARM_AE', title:'ARM-AE', desc:'Anti-Evasion recovery incl. transit checks (ARM)', layout:'grid', keyFields:[], fields, rows:[{keys:{}, label:'ANTI-EVASION RECOVERY INCLUDING TRANSIT CHECKS'}]});
+})();
+
+// ============================================================ state
+const S = {
+  unit:'', password:'', month:'', passwordState:'empty', unlocked:false, filed:{}, active:'GI_GST_1',
+  data:{}            // data[reportId] = { cells:[ {fid:{el,dirty,mode,baseline}} ] , rowEls }
+};
+let submitInFlight = false;
+
+// ============================================================ rendering
+function modeOf(R_, row, f){ return (row.over && row.over[f.id]) ? 'calc' : f.mode; }
+function usedFields(R_, row){ return row.used || R_.fields.map(f => f.id); }
+
+function makeInput(f, ro){
+  const el = document.createElement('input');
+  el.type = 'number'; el.inputMode = 'decimal'; el.step = f.type === 'int' ? '1' : '0.01'; el.min = '0';
+  if (ro) { el.readOnly = true; el.tabIndex = -1; el.className = 'calc'; }
+  if (f.type === 'amt') {                              // amounts (Rs. lakh): at most 2 digits after the decimal point
+    el.addEventListener('input', () => { if (/\.\d{3,}/.test(el.value)) el.value = el.value.replace(/(\.\d{2})\d+/, '$1'); });
+    el.addEventListener('blur', () => { if (el.value !== '' && !el.readOnly && !isNaN(parseFloat(el.value))) el.value = (Math.round((parseFloat(el.value) + Number.EPSILON) * 100) / 100).toFixed(2); });
+  }
+  return el;
+}
+
+function buildReport(R_, ctx){
+  const host = document.createElement('div');
+  host.id = 'rep_' + R_.id; host.style.display = 'none';
+  const st = { cells: [], rowEls: [] };
+  S.data[R_.id] = st;
+  const note = document.createElement('div'); note.className = 'note'; note.textContent = R_.title + ' - ' + R_.desc; if (['GI_GST_1A','GI_GST_5A','GI_GST_5B'].indexOf(R_.id) < 0) { note.textContent += '   |   '; const lk = document.createElement('b'); lk.textContent = 'Amounts in Rs. lakh'; lk.style.color = '#b3261e'; note.appendChild(lk); } host.appendChild(note);
+
+  const isApril = ctx.month.slice(5,7) === '04';
+  const prevMap = {}, pyMap = {}, curMap = {};
+  const keyOf = o => R_.keyFields.map(k => String(o[k])).join('|');
+  (ctx.prev[R_.id] || []).forEach(o => prevMap[keyOf(o)] = o);
+  (ctx.py[R_.id]   || []).forEach(o => pyMap[keyOf(o)]   = o);
+  (ctx.cur[R_.id]  || []).forEach(o => curMap[keyOf(o)]  = o);
+  st.hasCur = Object.keys(curMap).length > 0;
+
+  const makeCellFor = (row, ri, f) => {
+    const mode = modeOf(R_, row, f);
+    const el = makeInput(f, mode === 'calc' || mode === 'upto' || mode === 'open' || mode === 'pyupto');
+    if (mode !== 'calc') el.value = '0';                    // every entry cell starts at 0
+    const cell = { el, f, mode, dirty:false, baseline:null };
+    const k = keyOf(row.keys || {});
+    if (mode === 'upto') {
+      // "Upto the month" is never typed: previous month's upto (0 in April / when nothing is filed yet) + this month
+      cell.baseline = 0;
+      if (!isApril && prevMap[k] && prevMap[k][f.id] !== undefined && prevMap[k][f.id] !== '' && !isNaN(Number(prevMap[k][f.id]))) cell.baseline = Number(prevMap[k][f.id]);
+      el.classList.add('auto');
+    } else if (mode === 'open') {
+      // Opening balance = previous month's closing balance (0 when nothing is filed); not editable
+      const p = prevMap[k];
+      if (p && p[f.openFrom] !== undefined && p[f.openFrom] !== '' && !isNaN(Number(p[f.openFrom]))) el.value = Number(p[f.openFrom]);
+      el.classList.add('auto');
+    } else if (mode === 'brk') {
+      el.classList.add('brk');                 // light yellow = editable, must add up to the closing balance
+      // break-up of closing balance: carried over from last month's break-up as a starting point, editable, must match the closing balance
+      const p = prevMap[k];
+      if (p && p[f.id] !== undefined && p[f.id] !== '' && !isNaN(Number(p[f.id]))) { el.value = Number(p[f.id]); el.classList.add('brk'); }
+      el.addEventListener('input', () => recompute(R_));
+    } else if (mode === 'pyupto') {
+      // Previous F.Y. upto: last year's filed Current-F.Y. upto if present, else previous month's PY upto + this month's PY figure
+      const py = pyMap[k];
+      if (py && py[f.pyFrom] !== undefined && py[f.pyFrom] !== '' && !isNaN(Number(py[f.pyFrom]))) cell.pyVal = Number(py[f.pyFrom]);
+      else { cell.pyVal = null; cell.baseline = 0;
+        if (!isApril && prevMap[k] && prevMap[k][f.id] !== undefined && prevMap[k][f.id] !== '' && !isNaN(Number(prevMap[k][f.id]))) cell.baseline = Number(prevMap[k][f.id]); }
+      el.classList.add('auto');
+    } else if (mode === 'py') {
+      const p = pyMap[k];
+      if (p && p[f.pyFrom] !== undefined && p[f.pyFrom] !== '') { el.value = Number(p[f.pyFrom]); el.classList.add('auto'); }
+      el.addEventListener('input', () => recompute(R_));
+    } else if (mode === 'in') {
+      el.dataset.last = el.value;
+      el.addEventListener('input', () => {
+        recompute(R_);
+        const fl = R_.floor;                           // balance that must never go below zero (e.g. pending for final order)
+        if (fl && fl.reduce.indexOf(f.id) > -1) {
+          const m = $('floor_' + R_.id);
+          if (numOf(S.data[R_.id].cells[ri][fl.field]) < 0) {   // not allowed: put back the last valid entry, change nothing else
+            const bad = el.value; el.value = el.dataset.last; recompute(R_);
+            if (m) m.textContent = '✖ Not allowed: "' + f.label + '" = ' + bad + ' would make ' + fl.field.replace(/_/g, ' ') + ' negative. Entry not accepted (last valid value restored).';
+            return;
+          }
+          if (m) m.textContent = '';
+        }
+        el.dataset.last = el.value;
+      });
+    }
+    // an "Update" starts from what was already filed
+    if (curMap[k] && mode !== 'calc' && mode !== 'upto' && mode !== 'open' && mode !== 'pyupto' && curMap[k][f.id] !== undefined && curMap[k][f.id] !== '') el.value = Number(curMap[k][f.id]);
+    if (mode === 'brk' && curMap[k] && curMap[k][f.id] !== undefined && curMap[k][f.id] !== '') el.classList.add('brk');
+    return cell;
+  };
+
+  if (R_.layout === 'grid') {
+    const groups = [];
+    R_.fields.forEach(f => { if (!groups.includes(f.group)) groups.push(f.group); });
+    st.cells.push({});
+    groups.forEach(g => {
+      const fs = document.createElement('fieldset'); const lg = document.createElement('legend'); lg.textContent = g; fs.appendChild(lg);
+      const grid = document.createElement('div'); grid.className = 'grid';
+      R_.fields.filter(f => f.group === g).forEach(f => {
+        const cell = makeCellFor(R_.rows[0], 0, f);
+        st.cells[0][f.id] = cell;
+        const w = document.createElement('div'); w.className = 'gcell';
+        const lb = document.createElement('label'); lb.textContent = f.label; w.appendChild(lb); w.appendChild(cell.el); grid.appendChild(w);
+      });
+      fs.appendChild(grid); host.appendChild(fs);
+    });
+  } else {
+    const wrap = document.createElement('div'); wrap.className = 'twrap';
+    const tbl = document.createElement('table');
+    const thead = document.createElement('thead');
+    const tr1 = document.createElement('tr'), tr2 = document.createElement('tr');
+    const th0 = document.createElement('th'); th0.rowSpan = 2; th0.textContent = 'Item'; tr1.appendChild(th0);
+    let i = 0;
+    while (i < R_.fields.length) {
+      let j = i; while (j < R_.fields.length && R_.fields[j].group === R_.fields[i].group) j++;
+      const th = document.createElement('th'); th.className = 'g'; th.colSpan = j - i; th.textContent = R_.fields[i].group; tr1.appendChild(th);
+      i = j;
+    }
+    R_.fields.forEach(f => { const th = document.createElement('th'); th.textContent = f.label; tr2.appendChild(th); });
+    thead.appendChild(tr1); thead.appendChild(tr2); tbl.appendChild(thead);
+    const tb = document.createElement('tbody');
+    R_.rows.forEach((row, ri) => {
+      const tr = document.createElement('tr');
+      if (row.kind === 'total' || row.kind === 'display') tr.className = 'total';
+      if (row.kind === 'sec') tr.className = 'sec';
+      const td0 = document.createElement('td'); td0.className = 'lab'; td0.textContent = row.label;
+      if (row.sub) { const sm = document.createElement('small'); sm.textContent = '  ' + row.sub; td0.appendChild(sm); }
+      tr.appendChild(td0);
+      if (row.kind === 'sec') {
+        const td = document.createElement('td'); td.colSpan = R_.fields.length; td.className = 'na'; tr.appendChild(td);
+        st.cells.push(null); tb.appendChild(tr); return;
+      }
+      const used = usedFields(R_, row);
+      const cells = {}; st.cells.push(cells);
+      R_.fields.forEach(f => {
+        const td = document.createElement('td');
+        if (row.kind === 'display') {
+          const el = makeInput(f, true); cells[f.id] = { el, f, mode:'display', dirty:false, baseline:null }; td.appendChild(el);
+        } else if (!used.includes(f.id)) { td.className = 'na'; }
+        else { const cell = makeCellFor(row, ri, f); cells[f.id] = cell; td.appendChild(cell.el); }
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb); wrap.appendChild(tbl); host.appendChild(wrap);
+  }
+
+  if (R_.floor) { const fm = document.createElement('div'); fm.id = 'floor_' + R_.id; fm.className = 'note'; fm.style.color = '#b3261e'; host.appendChild(fm); }
+  if (R_.live) { const lv = document.createElement('div'); lv.id = 'live_' + R_.id; lv.className = 'note'; lv.style.whiteSpace = 'pre-line'; host.appendChild(lv); }
+  // mode + submit
+  const mb = document.createElement('div'); mb.className = 'modebar';
+  const defMode = st.hasCur ? 'Update' : 'New';
+  mb.innerHTML = '<label><input type="radio" name="mode_' + R_.id + '" value="New"' + (defMode==='New'?' checked':'') + '> New</label>' +
+                 '<label><input type="radio" name="mode_' + R_.id + '" value="Update"' + (defMode==='Update'?' checked':'') + '> Update</label>' +
+                 (st.hasCur ? '<span style="color:#0d7a3f"> (already filed for this month - figures loaded, edit and submit as Update)</span>' : '');
+  host.appendChild(mb);
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'submit'; btn.textContent = 'Submit ' + R_.title;
+  btn.addEventListener('click', () => submitReport(R_));
+  host.appendChild(btn);
+  const msg = document.createElement('div'); msg.className = 'msg'; msg.id = 'msg_' + R_.id; host.appendChild(msg);
+
+  $('forms').appendChild(host);
+  recompute(R_);
+}
+
+function numOf(cell){ if (!cell) return 0; const v = parseFloat(cell.el.value); return isNaN(v) ? 0 : v; }
+function getter(R_){ const st = S.data[R_.id]; return (ri, fid) => numOf(st.cells[ri] && st.cells[ri][fid]); }
+function setVal(cell, x){ cell.el.value = cell.f.type === 'int' ? String(Math.round(x)) : (Math.round((x + Number.EPSILON) * 100) / 100).toFixed(2); }
+
+function recompute(R_){
+  const st = S.data[R_.id], g = getter(R_);
+  if (R_.live && $('live_' + R_.id)) {            // set after the calculations below via setTimeout 0 not needed: run at end
+    setTimeout(() => { const L = R_.live(g), el = $('live_' + R_.id); if (!el) return; el.innerHTML = ''; L.forEach(x => { const d = document.createElement('div'); d.textContent = (x.ok ? '✔ ' : '✖ ') + x.text; d.style.color = x.ok ? '#0d7a3f' : '#c0392b'; el.appendChild(d); }); }, 0);
+  }
+  R_.rows.forEach((row, ri) => {
+    const cells = st.cells[ri]; if (!cells) return;
+    R_.fields.forEach(f => {
+      const c = cells[f.id]; if (!c) return;
+      if (c.mode === 'display') {
+        setVal(c, row.sumRows.reduce((s, j) => s + g(j, f.id), 0));
+      } else if (c.mode === 'calc') {
+        const fn = (row.over && row.over[f.id]) ? () => row.over[f.id].calc(g, f.id) : () => f.calc(g);
+        setVal(c, fn());
+      } else if (c.mode === 'upto' && !c.dirty && c.baseline !== null) {
+        setVal(c, c.baseline + g(ri, f.monthOf));
+      } else if (c.mode === 'pyupto') {
+        setVal(c, c.pyVal !== null && c.pyVal !== undefined ? c.pyVal : c.baseline + g(ri, f.monthOf));
+      }
+    });
+  });
+}
+
+// ============================================================ validation + submit
+function collect(R_){
+  const st = S.data[R_.id], rows = [];
+  R_.rows.forEach((row, ri) => {
+    if (row.kind === 'sec' || row.kind === 'display') return;
+    const o = Object.assign({}, row.keys);
+    R_.fields.forEach(f => {
+      const c = st.cells[ri][f.id];
+      let v = c ? numOf(c) : 0;
+      o[f.id] = f.type === 'int' ? Math.round(v) : r2(v);
+    });
+    rows.push(o);
+  });
+  return rows;
+}
+function validateReport(R_){
+  const E = [], st = S.data[R_.id], g = getter(R_);
+  R_.rows.forEach((row, ri) => {
+    const cells = st.cells[ri]; if (!cells || row.kind === 'display') return;
+    R_.fields.forEach(f => {
+      const c = cells[f.id]; if (!c) return;
+      const v = numOf(c);
+      if (f.type === 'int' && Math.abs(v - Math.round(v)) > 1e-9) E.push(R_.title + ' - ' + (row.label || '') + ' / ' + f.label + ': must be a whole number (no. of cases / persons), not an amount.');
+      if (v < -0.005 && !(R_.id === 'GI_GST_2' && f.id.indexOf('Closing') === 0)) E.push(R_.title + ' - ' + row.label + ' / ' + f.label + ': negative value not allowed.');
+      if (c.mode === 'upto') {
+        if (c.baseline === null && c.el.value === '') E.push(R_.title + ' - ' + (row.label || '') + ' / ' + f.group + ' ' + f.label + ': enter the cumulative "Upto the month" figure (first month of this unit in the system).');
+        else if (v + 0.005 < g(ri, f.monthOf)) E.push(R_.title + ' - ' + (row.label || '') + ' / ' + f.group + ' ' + f.label + ': "Upto" (' + v + ') cannot be less than "For the month" (' + g(ri, f.monthOf) + ').');
+      }
+    });
+  });
+  if (R_.validate) R_.validate(g, E);
+  return E;
+}
+
+async function submitReport(R_){
+  if (submitInFlight) return;                       // ignore double-tap while a submission is running
+  submitInFlight = true;
+  lockButtons(true);
+  const msgEl = $('msg_' + R_.id);
+  let quick = false;
+  try {
+    const errs = validateReport(R_);
+    if (errs.length) { quick = true; msgEl.textContent = '❌ Please correct:\n' + errs.slice(0, 12).join('\n') + (errs.length > 12 ? '\n...and ' + (errs.length - 12) + ' more' : ''); msgEl.style.color = 'red'; return; }
+    const mode = document.querySelector('input[name="mode_' + R_.id + '"]:checked').value;
+    msgEl.style.color = '#333'; msgEl.textContent = 'Checking existing data...';
+    const chk = await jsonp(SCRIPT_URL + '?' + q({action:'checkExists', report:R_.id, unit:S.unit, password:S.password, month:S.month}), {status:'error'});
+    if (chk.status !== 'success') { quick = true; msgEl.textContent = '❌ Could not check existing data (' + (chk.message || 'no response') + '). Please retry.'; msgEl.style.color = 'red'; return; }
+    if (mode === 'New' && chk.exists) { quick = true; msgEl.textContent = '❌ ' + R_.title + ' is already filed for ' + monthLabel(S.month) + '. Select "Update" to replace it.'; msgEl.style.color = 'red'; return; }
+    if (mode === 'Update' && chk.laterFiled) { quick = true; msgEl.textContent = '🔒 ' + R_.title + ' for ' + monthLabel(S.month) + ' is locked: a later month is already filed, so this month cannot be changed here. Contact HQ if a correction is needed.'; msgEl.style.color = 'red'; return; }
+    const rows = collect(R_);
+    msgEl.textContent = 'Submitting...';
+    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ Report:R_.id, Mode:mode, Unit:S.unit, Password:S.password, Month_Key:S.month, rows:rows }) });
+    // no-cors gives no response, so confirm by reading back
+    msgEl.textContent = 'Sent. Confirming...';
+    await new Promise(r => setTimeout(r, 2500));
+    // read the saved rows back and compare with what was sent (so an "Update" that failed is not mistaken for success)
+    const back = await jsonp(SCRIPT_URL + '?' + q({action:'fetchReport', report:R_.id, unit:S.unit, password:S.password, month:S.month}), {status:'error'});
+    const same = (a, b) => R_.fields.every(f => Math.abs((parseFloat(a[f.id]) || 0) - (parseFloat(b[f.id]) || 0)) < 0.006);
+    const ok = { status: back.status, exists: back.status === 'success' && back.rows.length === rows.length &&
+      rows.every((r, i) => same(back.rows[i] || {}, r)) };
+    if (ok.status === 'success' && ok.exists) {
+      msgEl.textContent = '✅ ' + R_.title + ' saved for ' + monthLabel(S.month) + ' (' + rows.length + ' row(s)) - confirmed in the Sheet.'; msgEl.style.color = 'green';
+      S.filed[R_.id] = true; markTabs();
+      document.querySelector('input[name="mode_' + R_.id + '"][value="Update"]').checked = true;
+    } else {
+      msgEl.textContent = '⚠ Sent, but not confirmed yet. Wait a few seconds and press Submit again as "Update" only if it still does not show as filed (✔ on the tab).'; msgEl.style.color = '#b9770e';
+    }
+  } catch (e) {
+    msgEl.textContent = '❌ Submission failed. Try again.'; msgEl.style.color = 'red';
+  } finally {
+    setTimeout(() => { submitInFlight = false; lockButtons(false); }, quick ? 0 : 4000);   // brief lock after a real send so an impatient 2nd tap cannot re-post
+  }
+}
+function lockButtons(on){ document.querySelectorAll('button.submit').forEach(b => { if (b.id !== 'fetchBtn') b.disabled = on; }); }
+
+// ============================================================ tabs
+function buildTabs(){
+  const t = $('tabs'); t.innerHTML = '';
+  R.forEach(R_ => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tab-btn'; b.id = 'tab_' + R_.id; b.textContent = R_.title; b.disabled = true;
+    b.addEventListener('click', () => showTab(R_.id)); t.appendChild(b);
+  });
+}
+function showTab(id){
+  S.active = id;
+  R.forEach(R_ => { const h = $('rep_' + R_.id); if (h) h.style.display = (R_.id === id) ? '' : 'none'; $('tab_' + R_.id).classList.toggle('active', R_.id === id); });
+}
+function markTabs(){ R.forEach(R_ => $('tab_' + R_.id).classList.toggle('done', !!S.filed[R_.id])); }
+
+// ============================================================ lock / unlock
+let pwTimer = null;
+function banner(text, cls){ const b = $('banner'); b.textContent = text; b.className = cls || ''; }
+function relock(){
+  S.unlocked = false; $('forms').innerHTML = ''; S.data = {}; S.filed = {};
+  R.forEach(R_ => { $('tab_' + R_.id).disabled = true; $('tab_' + R_.id).classList.remove('active', 'done'); });
+  S.unit = $('Unit').value; S.password = $('Password').value; S.month = $('Month').value;
+  $('FY').value = S.month ? fyOf(S.month) : '';
+  updateFetchState();
+}
+function updateFetchState(){
+  const ready = S.unit && S.password && S.month && S.passwordState === 'valid';
+  $('fetchBtn').disabled = !ready;
+  if (!S.unit || !S.password || !S.month) banner('Select Unit, enter Password and choose the Month.');
+  else if (S.passwordState === 'checking') banner('Checking password...');
+  else if (S.passwordState === 'invalid') banner('❌ Wrong password for ' + S.unit + '.', 'err');
+  else if (S.passwordState === 'valid') banner('🔓 Ready - click "Fetch Previous Month Figures & Open Forms".');
+}
+function schedulePasswordCheck(){
+  clearTimeout(pwTimer); S.passwordState = 'empty';
+  if (!S.unit || !S.password) { updateFetchState(); return; }
+  S.passwordState = 'checking'; updateFetchState();
+  pwTimer = setTimeout(async () => {
+    const key = S.unit + '|' + S.password;
+    const r = await jsonp(SCRIPT_URL + '?' + q({action:'checkPassword', unit:S.unit, password:S.password}), {status:'error'});
+    if (S.unit + '|' + S.password !== key) return;      // changed meanwhile
+    S.passwordState = (r.status === 'success' && r.valid) ? 'valid' : (r.status === 'success' ? 'invalid' : 'error');
+    if (S.passwordState === 'error') banner('⚠ Could not reach the server. Check internet and try again.', 'err'); else updateFetchState();
+  }, 500);
+}
+
+async function fetchAndOpen(){
+  if (!S.unit || !S.password || !S.month) return;
+  $('fetchBtn').disabled = true; banner('Checking earlier months and fetching previous figures...');
+  const st = await jsonp(SCRIPT_URL + '?' + q({action:'checkMonthStatus', unit:S.unit, password:S.password, month:S.month}), {status:'error'});
+  if (st.status !== 'success') { banner('⚠ ' + (st.message || 'Could not reach the server') + '. Please retry.', 'err'); $('fetchBtn').disabled = false; return; }
+  if (st.earlierPending && st.earlierPending.length) {
+    const lines = st.earlierPending.map(p => '• ' + monthLabel(p.month) + ': ' + p.missing.map(x => x.replace(/_/g, '-')).join(', '));
+    banner('❌ Earlier month(s) not fully filed - please file them first, because this month\'s opening / upto figures depend on them:\n' + lines.join('\n'), 'err');
+    $('fetchBtn').disabled = false; return;
+  }
+  const d = await jsonp(SCRIPT_URL + '?' + q({action:'fetchAllPrevious', unit:S.unit, password:S.password, month:S.month}), {status:'error'});
+  if (d.status !== 'success') { banner('⚠ ' + (d.message || 'Could not fetch previous figures') + '. Please retry.', 'err'); $('fetchBtn').disabled = false; return; }
+  const ctx = { month:S.month, prev:d.prev || {}, py:d.py || {}, cur:d.cur || {} };
+  $('forms').innerHTML = ''; S.data = {};
+  R.forEach(R_ => buildReport(R_, ctx));
+  S.filed = {}; (st.filedThisMonth || []).forEach(x => S.filed[x] = true);
+  R.forEach(R_ => $('tab_' + R_.id).disabled = false);
+  markTabs(); showTab(S.active || 'GI_GST_1'); S.unlocked = true;
+  const hasPrev = R.some(R_ => (ctx.prev[R_.id] || []).length), isApril = S.month.slice(5,7) === '04';
+  const filedCount = (st.filedThisMonth || []).length;
+  banner('✅ Forms open for ' + S.unit + ' - ' + monthLabel(S.month) + ' (F.Y. ' + fyOf(S.month) + ').\n' +
+    (isApril ? 'April: "Upto the month" starts afresh for the new financial year.\n' : (hasPrev ? 'Opening balance and "Upto" figures taken from ' + monthLabel(d.prevMonth) + '.\n' : 'No filed data for ' + monthLabel(d.prevMonth) + ' - Opening balance and "Upto" figures start from 0 (HQ can seed them, see guide).\n')) +
+    'Filed for this month: ' + filedCount + ' of 9 reports (✔ on the tab).', 'ok');
+  $('fetchBtn').disabled = false;
+}
+
+// ============================================================ init
+(function init(){
+  // months from system start to current month
+  const sel = $('Month'); const cur = currentMonthKey();
+  for (let k = SYSTEM_START_MONTH; k <= cur; k = addMonths(k, 1)) { const o = document.createElement('option'); o.value = k; o.textContent = monthLabel(k); sel.appendChild(o); }
+  buildTabs();
+  $('Unit').addEventListener('change', () => { $('Password').value = ''; S.passwordState = 'empty'; relock(); });
+  $('Month').addEventListener('change', () => { relock(); schedulePasswordCheck(); });
+  $('Password').addEventListener('input', () => { relock(); schedulePasswordCheck(); });
+  $('fetchBtn').addEventListener('click', fetchAndOpen);
+  relock();
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+})();
+</script>
+</body>
+</html>
